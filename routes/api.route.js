@@ -1,13 +1,18 @@
 import { Router } from "express";
 import Entry from "../model/entry.js";
 import moment from "moment";
+import { join } from "node:path";
 
 const apiRoute = Router();
 
+apiRoute.get("/", (req, res) => {
+  res.send(join(import.meta.dirname, "..", "public", "index.html"));
+});
+
 apiRoute.get("/api/today", async (req, res) => {
   try {
-    const date = new Date();
-    const data = await Entry.findOne({
+    let date = new Date();
+    let data = await Entry.findOne({
       date: moment(date).format("YYYY-MM-DD"),
     });
     if (data) {
@@ -24,7 +29,7 @@ apiRoute.get("/api/today", async (req, res) => {
     if (err.message === "no data available") {
       return res.json({ success: false, message: "updates coming soon" });
     }
-    return res.staus(400).json({ success: false, message: err.message });
+    return res.status(400).json({ success: false, message: err.message });
   }
 });
 

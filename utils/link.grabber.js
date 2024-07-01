@@ -1,28 +1,22 @@
 import { load } from "cheerio";
-import puppeteer from "puppeteer-core";
+import puppeteer from "puppeteer-extra";
+import stealthPlugin from "puppeteer-extra-plugin-stealth";
 import newspaperData from "./newspaper.links.js";
 import "dotenv/config";
 
-const chromeBinaryPath = process.env.CHROME_BINARY_PATH;
+puppeteer.use(stealthPlugin());
 
+const chromeBinaryPath = process.env.CHROME_BINARY_PATH;
 export const getGuardianUrl = async () => {
-  const browser = await puppeteer.launch({
-    executablePath: chromeBinaryPath,
-  });
   try {
-    const page = await browser.newPage();
-    await page.goto(newspaperData.guardian, {
-      waitUntil: "domcontentloaded",
-      timeout: 0,
-    });
-    const renderedHtml = await page.content();
-    const $ = load(renderedHtml);
-    const imgLink = $("img.pdf-thumbnail-preview").attr("src");
-    return imgLink;
+    const response = await fetch(
+      "https://epaperbackend.guardian.ng/api/papers/today-paper",
+    );
+
+    const { result } = await response.json();
+    return result;
   } catch (err) {
     console.error(`${err.name}:${err.message}`);
-  } finally {
-    await browser.close();
   }
 };
 
@@ -57,13 +51,13 @@ export const getDTrustUrl = async () => {
       waitUntil: "domcontentloaded",
       timeout: 0,
     });
-    page.setJavaScriptEnabled(false);
     const renderedHtml = await page.content();
     const $ = load(renderedHtml);
-    let imgLink = $(
-      'div.wp-block-themepunch-revslider img[fetchpriority="high"][decoding="async"][class="tp-rs-img rs-lazyload"]',
-    ).attr("src");
-    console.log(imgLink);
+    const allImg = $(
+      ".elementor-element.elementor-element-7fccd0d.e-con-full.e-flex.e-con.e-parent img",
+    );
+    const img = allImg.eq(1);
+    let imgLink = img.attr("data-lazyload");
     imgLink = `https:${imgLink.replace("-scaled", "")}`;
     return imgLink;
   } catch (err) {
@@ -85,7 +79,9 @@ export const getVanguardUrl = async () => {
     });
     const renderedHtml = await page.content();
     const $ = load(renderedHtml);
-    const imgLink = $("div.wp-block-column img").attr("src");
+    const allColumns = $(".wp-block-column");
+    const imgColumn = allColumns.eq(2);
+    const imgLink = imgColumn.find("img").attr("src");
     return imgLink;
   } catch (err) {
     console.error(`${err.name}:${err.message}`);
@@ -106,8 +102,8 @@ export const getSportUrl = async () => {
     });
     const renderedHtml = await page.content();
     const $ = load(renderedHtml);
-    const imgLink = $('head link[rel="image_src"]').attr("href");
-    imgLink.replace(/\/\d+\/1\/\d+x\d+\/.*\.jpg$/, "/1135x1600/");
+    let imgLink = $('head link[rel="image_src"]').attr("href");
+    imgLink = imgLink.replace(/\/\d+x\d+\/.*\.jpg$/, "/1135x1600/");
     return imgLink;
   } catch (err) {
     console.error(`${err.name}:${err.message}`);
